@@ -1,2 +1,5 @@
 # abp-angular
-AWS Blueprint for Angular web application
+
+[AWS Blueprint](https://github.com/rynop/aws-blueprint) for Angular web application
+
+## Setup
