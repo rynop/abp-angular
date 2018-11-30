@@ -1,6 +1,6 @@
 # abp-angular
 
-[AWS Blueprint](https://github.com/rynop/aws-blueprint) for running Angular web apps on S3 with CloudFront
+[AWS Blueprint](https://github.com/rynop/aws-blueprint) for running Angular web apps AWS
 
 ## What this gives you
 
