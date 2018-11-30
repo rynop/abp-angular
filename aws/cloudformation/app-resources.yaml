@@ -12,11 +12,16 @@ Parameters:
     Type: String
 
   CloudFrontCname:
-    Description: Custom domain name to use (www.yourdomain.com).  Will prefix this with stageName--
+    Description: Custom domain name to use (www.yourdomain.com).  A stageName-- prefix dns will be auto created
     Type: String
-    Default: www.yourdomain.com
+    Default: demo.yourdomain.com
     AllowedPattern : (([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.){2,}([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9]){2,}
     ConstraintDescription : Must be a valid FQDN   
+
+  NestedStacksS3Bucket:
+    Description: The name of the versioned S3 bucket you created to hold nested stack temlpates
+    Type: String
+    Default: us-east-1--aws-blueprint.rynop.com
 
 Conditions: 
   CreateStagingResources: !Equals [ !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], prod ]
@@ -66,10 +71,7 @@ Outputs:
   CloudFront:
     Description: CloudFront ID
     Value: !GetAtt CloudFront.Outputs.CloudFront
-  CNAME:
-    Description: Custom domain for Cloudfront
-    Value: !GetAtt CloudFront.Outputs.CNAME
-  URL:
+  AppURL:
     Description: App URL
     Value: !GetAtt CloudFront.Outputs.AppURL
 

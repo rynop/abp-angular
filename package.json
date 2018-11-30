@@ -1,0 +1,15 @@
+{
+  "name": "abp-angular",
+  "version": "0.0.1",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve --ssl true --ssl-cert ./dev-etc/ssl.crt --ssl-key ./dev-etc/ssl.key --host 0.0.0.0 --disable-host-check",
+    "build:prod": "ng build --stats-json --prod --build-optimizer --delete-output-path --aot --output-path=dist",
+    "deploy:prod": "yarn run build:prod && gzip-all \"dist/*.{css,js,html}\" && dev-bin/deploy.sh us-east-1--prod--master--www.rynop.com"
+  },
+  "private": true,
+  "dependencies": {},
+  "devDependencies": {
+    "gzip-all": "~1.0.0"
+  }
+}
