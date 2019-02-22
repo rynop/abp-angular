@@ -43,6 +43,7 @@ Run `yarn deploy:prod`. This will:
 - Execute [dev-bin/deploy.sh](./dev-bin/deploy.sh) passing the name of the bucket you want to deploy to. `deploy.sh` does the following:
   - Does an `aws s3 sync` setting content type and `cache-control` headers for all assets other than `index.html`
   - Copies `index.html` telling CloudFront to not cache. This allows quick updates to your web app.
+  - uploads a `current-git-commit.txt` file containing git hash at time of this deploy
 
 ## TODO
 
