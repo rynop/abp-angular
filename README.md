@@ -36,7 +36,7 @@ Run `yarn run start`. This will use the SSL cert you generated above.
 
 ## Deploying
 
-Run `yarn deploy:prod`. This will:
+Run `yarn deploy:prod`. Before doing so, make sure to update `deploy:prod` in `package.json` to point to your s3 bucket. Running `yarn deploy:prod` will:
 
 - Run `build:prod` (does an `ng build` for production)
 - Gzip all assets
