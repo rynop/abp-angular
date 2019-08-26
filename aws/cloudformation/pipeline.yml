@@ -16,6 +16,18 @@ Parameters:
     Description: Path to the buildspec used to build and deploy webapp
     Type: String
     Default: aws/codebuild/angular-buildspec.yml  
+  TestCloudFormationTemplateParameters:
+    Description: Test stack - Relative JSON config file that contains parameters passed CloudFormation
+    Type: String
+    Default: aws/cloudformation/parameters/test-pipeline-parameters.json
+  StagingCloudFormationTemplateParameters:
+    Description: Staging stack - Relative JSON config file that contains parameters passed CloudFormation
+    Type: String
+    Default: aws/cloudformation/parameters/staging-pipeline-parameters.json
+  ProdCloudFormationTemplateParameters:
+    Description: Prod stack - Relative JSON config file that contains parameters passed CloudFormation
+    Type: String
+    Default: aws/cloudformation/parameters/prod-pipeline-parameters.json    
   ApprovalNotificationArn:
     Description: SNS ARN to receive notifications for approvals
     Type: String
@@ -177,11 +189,41 @@ Resources:
             Statement:
               - Action:
                 - 's3:*'
+                - 'cloudformation:CreateStack'
+                - 'cloudformation:DescribeStacks'
+                - 'cloudformation:DeleteStack'
+                - 'cloudformation:UpdateStack'
+                - 'cloudformation:CreateChangeSet'
+                - 'cloudformation:ExecuteChangeSet'
+                - 'cloudformation:DeleteChangeSet'
+                - 'cloudformation:DescribeChangeSet'
+                - 'cloudformation:SetStackPolicy'
                 - 'iam:PassRole'
                 - 'sns:Publish'
                 - 'codebuild:BatchGetBuilds'
                 - 'codebuild:StartBuild'
                 - 'codecommit:*'
+                Effect: Allow
+                Resource: '*'
+
+  CFNRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: ['sts:AssumeRole']
+          Effect: Allow
+          Principal:
+            Service: [cloudformation.amazonaws.com]
+        Version: '2012-10-17'
+      Path: /
+      Policies:
+        - PolicyName: CloudFormationRole
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Action:
+                  - '*'
                 Effect: Allow
                 Resource: '*'
 
@@ -263,20 +305,19 @@ Resources:
               OutputArtifacts:
                 - Name: DeployTestResourcesOutput                     
               RunOrder: 2
-          - Name: BuildDeployWebappTest
-            Actions:
-              - Name: CodeBuild
-                InputArtifacts:
-                  - Name: MyAppCode
-                  - Name: DeployTestResourcesOutput
-                ActionTypeId:
-                  Category: Build
-                  Owner: AWS
-                  Provider: CodeBuild
-                  Version: '1'
-                Configuration:
-                  ProjectName: !Ref WebappCodeBuildProjectTestStage
-                RunOrder: 1                
+        - Name: BuildDeployWebappTest
+          Actions:
+            - Name: CodeBuild
+              InputArtifacts:
+                - Name: MyAppCode
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              Configuration:
+                ProjectName: !Ref WebappCodeBuildProjectTestStage
+              RunOrder: 1                
         # Seperate stage so test enviornment re-deployes are not blocked by approvals
         - Name: PromoteTest
           Actions:                    

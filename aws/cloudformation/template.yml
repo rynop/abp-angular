@@ -18,7 +18,7 @@ Parameters:
       - false    
 
   AcmCertificateArn:
-    Description: The ARN of a certificate from AWS Certificate Manager (ACM)
+    Description: The ARN of a certificate from AWS Certificate Manager (ACM) for yourdomain.com
     Type: String
     Default: arn:aws:acm:us-east-1:527930388204:certificate/dcc1438d-ea5e-4aef-8bb6-077882cac532
 
