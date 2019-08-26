@@ -1,50 +1,33 @@
 # abp-angular
 
-[AWS Blueprint](https://github.com/rynop/aws-blueprint) for running Angular web apps AWS
+Convention over configuration based [AWS Blueprint](https://github.com/rynop/aws-blueprint) for running Angular web apps in AWS driven by CI/CD and CloudFormation.
 
 ## What this gives you
 
-- Angular assets gzipped & CDN hosted out of S3 - supporting Angular routing
-- No-maintence, free HTTPS
+- Multi-stage, feature branch, CI/CD driven via CodePipeline and Codebuild
+- Angular assets gzipped & CDN cached and hosted from S3 origin - supporting Angular routing
+- No-maintence, free HTTPS via ACM
 - Root domain apex support with redirection
-- Angular build & deploy scripts
-- Local development HTTPS support with self signed cert generation
-- Pre-commit git hook that does linting
+- Local HTTPS support via [ngrok](https://ngrok.com/)
+- Node module vendoring (aka commit `node_modules`) with [yarn autoclean](https://yarnpkg.com/lang/en/docs/cli/autoclean/)
 
-## Setup
+## Prerequisites
 
-Note: This blueprint asserts you use [yarn](https://yarnpkg.com/en/)
+1.  Create a [github access token](https://github.com/settings/tokens). This token will be used by the CI/CD to pull code. Required scopes: ` admin:repo_hook, repo`
+1.  An SNS topic for CI/CD code promotion approvals. Subscribe your email address to it.
+1.  [Yarn](https://yarnpkg.com)
+1.  **Optional**: free [ngrok](https://ngrok.com/) account required for local HTTPS support
 
-1.  Generate an Angular app via [ng generate](https://angular.io/cli/generate)
-1.  Copy the following dirs from this repo to your project root: `aws,dev-bin,dev-etc`
-1.  Create a CloudFormation stack using [aws/cloudformation/app-resources.yaml](./aws/cloudformation/app-resources.yaml)
-    1.  Make sure you have created your [nested-stacks aws-blueprint](https://github.com/rynop/aws-blueprint) bucket. This only needs to be done once per AWS account.
-    1.  You will need to replace the string `YourS3BersionId` in `app-resources.yaml` with the S3 version ID of `angular-custom-domain.yaml` in your nested-stacks aws-blueprint bucket. You can easily find this version DI by running:
-    ```
-    aws s3api list-object-versions --bucket <yourNestedStacksS3Bucket> --prefix nested-stacks/cloudfront/angular-custom-domain.yaml --query 'Versions[?IsLatest].[VersionId]' --output text
-    ```
-1.  Copy the `scripts` and `devDependencies` attributes out of [./package.json](./package.json) into your generated `package.json`
-    1.  Modify `deploy:prod`: replace `us-east-1--prod--master--www.rynop.com` with your S3 bucket name. Bucket was created by CloudFormation stack above (see outputs tab).
-1.  Run `yarn install`
-1.  Setup [HTTPS for local devlopment](https://rynop.com/2018/11/12/setup-secure-https-certificate-for-local-angular-development-on-macos-mojave/). Save the ssl files in `dev-etc`.
-1.  Optional: setup git pre-commit lint hook: `git config core.hooksPath .githooks`
-1.  Optional: setup root apex redirect (both HTTP&HTTPS). Ex: `rynop.com` -> `https://www.rynop.com`. Follow [my directions here](https://rynop.com/2017/04/20/howto-serve-angular2-app-from-s3-and-cloudfront-with-free-https/), jump right to step 5.
+## Quickstart
 
-## Local development
+1. `make install`
+1. `make run/local-webapp`
+1. **Optonal**: For local HTTPS, in another terminal tab: `make run/ngrok-webapp` (free [ngrok](https://ngrok.com/) account required).
 
-Run `yarn run start`. This will use the SSL cert you generated above.
+## Setup CI/CD
 
-## Deploying
+1.  Set values in [aws/cloudformation/parameters/*.json](./aws/cloudformation/parameters).  The CI/CD CodePipeline will pass these into the cloud formation template ([aws/cloudformation/template.yml](./aws/cloudformation/template.yml)) for each stage stack that is created. Typically the values are the same for each `.json` file except for `StageName`.  Setting `CreateCloudFront` to `false` is helpful early on to bypass slow CDN creation while you are working out kinks.
+1.  Create a new CloudFormation stack using [aws/cloudformation/pipeline.yml](./aws/cloudformation/pipeline.yml).  Stack naming convention: `[repo]--[branch]--webapp--cicd`. Ex: `abp-angular--master--webapp-cicd`.  This `pipeline.yml` creates a CodePipeline that is your CI/CD.
+1.  Do a `git push` and watch the newly created CodePipeline.  As each stage in the pipeline completes, look at the `output` tab of the executed CloudFormation changeset for the CloudFront DNS name to use.
 
-Run `yarn deploy:prod`. Before doing so, make sure to update `deploy:prod` in `package.json` to point to your s3 bucket. Running `yarn deploy:prod` will:
-
-- Run `build:prod` (does an `ng build` for production)
-- Gzip all assets
-- Execute [dev-bin/deploy.sh](./dev-bin/deploy.sh) passing the name of the bucket you want to deploy to. `deploy.sh` does the following:
-  - Does an `aws s3 sync` setting content type and `cache-control` headers for all assets other than `index.html`
-  - Copies `index.html` telling CloudFront to not cache. This allows quick updates to your web app.
-  - uploads a `current-git-commit.txt` file containing git hash at time of this deploy
-
-## TODO
-
-- Setup CI/CD
+## TODO: update cloudformation parameters to not be rynop specific

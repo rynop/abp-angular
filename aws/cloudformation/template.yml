@@ -1,0 +1,176 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  Angular app with CloudFront CDN.  Private data bucket with CORS for direct access from JS
+
+Parameters:
+  StageName:
+    Type: String
+    Description: The stage name
+    Default: test
+
+  CreateCloudFront:
+    Description: Create CloudFront? May not want to wait 30 mins for CDN creation when testing
+    Type: String
+    Default: true
+    ConstraintDescription: Only true or false are allowed
+    AllowedValues:
+      - true
+      - false    
+
+  AcmCertificateArn:
+    Description: The ARN of a certificate from AWS Certificate Manager (ACM)
+    Type: String
+    Default: arn:aws:acm:us-east-1:527930388204:certificate/dcc1438d-ea5e-4aef-8bb6-077882cac532
+
+  CloudFrontCname:
+    Description: Custom domain name to use (foo.yourdomain.com).  Will prefix this with [Stage]--
+    Type: String
+    Default: blah.yourdomain.com
+    AllowedPattern : (([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.){2,}([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9]){2,}
+    ConstraintDescription : Must be a valid DNS zone name WITHOUT trailing period   
+
+Conditions:   
+  NotStaging: !Not [!Equals [ !Ref StageName, staging ]]
+  IsLocal: !Equals [ !Ref StageName, local ]
+  IsProd: !Equals [ !Ref StageName, prod ]
+  CreateCDN: !Equals [!Ref CreateCloudFront, true]
+
+Resources: 
+#### S3 bucket that hosts Angular app
+  AppBucket:
+    Type: AWS::S3::Bucket    
+    DeletionPolicy: 'Delete'
+    Properties:
+      BucketName: !Sub 
+        - ${AWS::Region}--${StageName}--${Repo}--${Branch}--webapp
+        - { Repo: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ] }         
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: index.html
+      VersioningConfiguration:
+        Status: Enabled 
+
+  # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-cloudfront-cloudfrontoriginaccessidentity.html
+  OriginAccessIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: Access identity between CloudFront and S3 bucket  
+
+  DataBucket:
+    Type: AWS::S3::Bucket    
+    DeletionPolicy: 'Delete'
+    Properties:
+      BucketName: !Sub ${AWS::Region}--${AWS::StackName}--data
+      BucketName: !Sub 
+        - ${AWS::Region}--${StageName}--${Repo}--${Branch}--data
+        - { Repo: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ] }         
+      AccessControl: Private
+      PublicAccessBlockConfiguration: 
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled 
+      CorsConfiguration:
+        CorsRules:
+        - AllowedHeaders: ['*']
+          AllowedMethods: [GET, PUT, POST]
+          AllowedOrigins: ['*']
+          Id: cors1
+          MaxAge: '3600'  
+
+#### Cloudfront and DNS stuff
+  CloudFront:  
+    Type: AWS::CloudFront::Distribution
+    Condition: CreateCDN
+    DependsOn: AppBucket
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        IPV6Enabled: true
+        HttpVersion: http2
+        DefaultRootObject: index.html
+        Comment: !Join [ '', [!Ref 'AWS::StackName', ' Angular CloudFront']]
+        Aliases: 
+          - !Sub ${StageName}--${CloudFrontCname}
+          - !If [IsProd, !Ref CloudFrontCname, !Ref "AWS::NoValue"]
+        ViewerCertificate:
+          AcmCertificateArn: !Ref AcmCertificateArn
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.1_2016
+        Origins:
+        - DomainName: !Sub ${AppBucket}.s3.amazonaws.com
+          Id: myS3Origin
+          S3OriginConfig:
+            OriginAccessIdentity: !Sub origin-access-identity/cloudfront/${OriginAccessIdentity}
+        DefaultCacheBehavior:
+          AllowedMethods: ["GET", "HEAD", "OPTIONS"]
+          CachedMethods: ["GET", "HEAD", "OPTIONS"]
+          ForwardedValues:
+            Headers:
+            - Access-Control-Request-Headers
+            - Access-Control-Request-Method
+            - Origin
+            - Authorization
+            QueryString: false
+            Cookies:
+              Forward: none
+          TargetOriginId: myS3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          Compress: true
+          DefaultTTL: 0
+        CustomErrorResponses:
+        # for 404->200 for Angular routing  
+        - ErrorCachingMinTTL: 300
+          ErrorCode: 404
+          ResponseCode: 200
+          ResponsePagePath: /index.html        
+        - ErrorCachingMinTTL: 0
+          ErrorCode: 400
+        - ErrorCachingMinTTL: 1
+          ErrorCode: 403
+        - ErrorCachingMinTTL: 5
+          ErrorCode: 500
+  DNSARecord:    
+    Type: AWS::Route53::RecordSet
+    Condition: CreateCDN
+    Properties:
+      Comment: !Ref 'AWS::StackName'
+      Name: !Sub ${StageName}--${CloudFrontCname}        
+      Type: A
+      HostedZoneName: !Join ['.', [ !Select [1, !Split ['.', !Ref CloudFrontCname]], !Select [2, !Split ['.', !Ref CloudFrontCname]], '']]
+      AliasTarget:
+        HostedZoneId: Z2FDTNDATAQYW2
+        DNSName: !GetAtt CloudFront.DomainName
+  DNSAAAARecord:    
+    Type: AWS::Route53::RecordSet
+    Condition: CreateCDN
+    Properties:
+      Comment: !Ref 'AWS::StackName'
+      Name: !Sub ${StageName}--${CloudFrontCname}
+      Type: AAAA
+      HostedZoneName: !Join ['.', [ !Select [1, !Split ['.', !Ref CloudFrontCname]], !Select [2, !Split ['.', !Ref CloudFrontCname]], '']]
+      AliasTarget:
+        HostedZoneId: Z2FDTNDATAQYW2
+        DNSName: !GetAtt CloudFront.DomainName
+
+Outputs:
+  WebAppBucket:
+    Description: S3 Bucket name hosting webapp
+    Value: !Ref AppBucket
+  CloudFront:
+    Description: CloudFront ID
+    Condition: CreateCDN
+    Value: !Ref CloudFront
+  CNAME:
+    Description: Custom domain for Cloudfront
+    Condition: CreateCDN
+    Value: !Ref DNSARecord
+  AppURL:
+    Description: App URL
+    Condition: CreateCDN
+    Value: !Sub
+        - https://${DN}
+        - { DN: !Ref DNSARecord }    

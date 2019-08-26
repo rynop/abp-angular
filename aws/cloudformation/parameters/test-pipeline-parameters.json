@@ -1,0 +1,8 @@
+{
+  "Parameters": {
+    "StageName": "test",
+    "CreateCloudFront": "false",
+    "AcmCertificateArn": "arn:aws:acm:us-east-1:527930388204:certificate/dcc1438d-ea5e-4aef-8bb6-077882cac532",
+    "CloudFrontCname": "abp-angular.pwebo.com"
+  }
+}
