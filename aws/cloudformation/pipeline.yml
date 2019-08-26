@@ -87,13 +87,13 @@ Resources:
                     - ${bucket}*
                     - { bucket: !GetAtt ArtifactStoreBucket.Arn }
                   - !Sub 
-                    - arn:aws:s3:::${AWS::Region}--test--${Repo}--${Branch}-webapp*
+                    - arn:aws:s3:::${AWS::Region}--test--${Repo}--${Branch}--webapp*
                     - { Repo: !Select [ 0, !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ] } 
                   - !Sub 
-                    - arn:aws:s3:::${AWS::Region}--staging--${Repo}--${Branch}-webapp*
+                    - arn:aws:s3:::${AWS::Region}--staging--${Repo}--${Branch}--webapp*
                     - { Repo: !Select [ 0, !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ] } 
                   - !Sub 
-                    - arn:aws:s3:::${AWS::Region}--prod--${Repo}--${Branch}-webapp*
+                    - arn:aws:s3:::${AWS::Region}--prod--${Repo}--${Branch}--webapp*
                     - { Repo: !Select [ 0, !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ] } 
 
   WebappCodeBuildProjectTestStage:
@@ -109,7 +109,7 @@ Resources:
         EnvironmentVariables:          
           - Name: WEBAPP_S3_BUCKET
             Value: !Sub
-            - ${AWS::Region}--test--${Repo}--${Branch}-webapp       
+            - ${AWS::Region}--test--${Repo}--${Branch}--webapp       
             - { Repo: !Select [ 0, !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ] }   
           - Name: APP_STAGE
             Value: test
@@ -134,7 +134,7 @@ Resources:
         EnvironmentVariables:          
           - Name: WEBAPP_S3_BUCKET
             Value: !Sub
-            - ${AWS::Region}--staging--${Repo}--${Branch}-webapp       
+            - ${AWS::Region}--staging--${Repo}--${Branch}--webapp       
             - { Repo: !Select [ 0, !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ] }   
           - Name: APP_STAGE
             Value: staging
@@ -159,7 +159,7 @@ Resources:
         EnvironmentVariables:          
           - Name: WEBAPP_S3_BUCKET
             Value: !Sub
-            - ${AWS::Region}--prod--${Repo}--${Branch}-webapp       
+            - ${AWS::Region}--prod--${Repo}--${Branch}--webapp       
             - { Repo: !Select [ 0, !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ] }   
           - Name: APP_STAGE
             Value: prod
