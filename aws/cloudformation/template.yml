@@ -57,30 +57,6 @@ Resources:
       CloudFrontOriginAccessIdentityConfig:
         Comment: Access identity between CloudFront and S3 bucket  
 
-  DataBucket:
-    Type: AWS::S3::Bucket    
-    DeletionPolicy: 'Delete'
-    Properties:
-      BucketName: !Sub ${AWS::Region}--${AWS::StackName}--data
-      BucketName: !Sub 
-        - ${AWS::Region}--${StageName}--${Repo}--${Branch}--data
-        - { Repo: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ] }         
-      AccessControl: Private
-      PublicAccessBlockConfiguration: 
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
-      VersioningConfiguration:
-        Status: Enabled 
-      CorsConfiguration:
-        CorsRules:
-        - AllowedHeaders: ['*']
-          AllowedMethods: [GET, PUT, POST]
-          AllowedOrigins: ['*']
-          Id: cors1
-          MaxAge: '3600'  
-
 #### Cloudfront and DNS stuff
   CloudFront:  
     Type: AWS::CloudFront::Distribution
